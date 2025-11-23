@@ -11,7 +11,7 @@ spring:
               predicates:
                 - Path=/api/v1/coupon/**
               filters:
-                - StripPrefix=3
+                - StripPrefix=4
 
 server:
   port: 8080
