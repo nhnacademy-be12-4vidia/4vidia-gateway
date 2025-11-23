@@ -1,0 +1,59 @@
+name: 4vidia-gateway
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: 'maven'
+
+      - name: Build JAR
+        run: mvn clean package -DskipTests -B
+
+      - name: 도커 로그인
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: baejongto
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: 도커 이미지 빌드와 푸시
+        run: |
+          docker build -t ghcr.io/${{ github.repository_owner }}/4vidia-gateway:latest .
+          docker push ghcr.io/${{ github.repository_owner }}/4vidia-gateway:latest
+          echo "빌드완료"
+
+      - name: 서버 배포
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          GH_TOKEN: ${{ secrets.NEW_TOKEN }}
+          GH_OWNER: ${{ github.repository_owner }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          ADMIN_ID: ${{ secrets.ADMIN_ID }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+        with:
+          host: s2.java21.net
+          username: be12-team4
+          password: ${{ secrets.SERVER_PASSWORD }}
+          port: 8822
+          envs: GH_TOKEN,GH_OWNER,SSH_PRIVATE_KEY,ADMIN_ID,ADMIN_PASSWORD
+          script_stop: true
+          script: |
+            echo $GH_TOKEN | docker login ghcr.io -u baejongto --password-stdin
+            cd ~
+            
+            echo "Starting 4vidia-gateway-1"
+            docker compose pull 4vidia-gateway-1
+            docker compose up -d 4vidia-gateway-1
