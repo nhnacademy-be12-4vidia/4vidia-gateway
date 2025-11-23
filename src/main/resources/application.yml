@@ -9,7 +9,7 @@ eureka:
     fetch-registry: true
     register-with-eureka: true
     service-url:
-      defaultZone: http://${ADMIN_ID}:${ADMIN_PASSWORD}@4vidia-discovery:10465/eureka/
+      defaultZone: http://${ADMIN_ID}:${ADMIN_PASSWORD}@4vidia-discovery:8080/eureka/
       # defaultZone: http://<username>:<password>@<host>:<port>/eureka/
       # docker network의 역할은 단지 내부 DNS처럼 이름으로 컨테이너를 찾을 수 있게 해주는 것뿐입니다.
       # 만약 network로 안엮여져 있다면 해당 도커로 접근할수없는지 테스트해보자.
