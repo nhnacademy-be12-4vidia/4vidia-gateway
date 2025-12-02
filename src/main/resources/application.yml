@@ -27,6 +27,13 @@ spring:
               filters:
                 - StripPrefix=3
 
+            - id: 4vidia-order-service
+              uri: lb://4vidia-bookstore-service
+              predicates:
+                - Path=/api/v1/order-service/**
+              filters:
+                - StripPrefix=3
+
 server:
   port: 8080
 
