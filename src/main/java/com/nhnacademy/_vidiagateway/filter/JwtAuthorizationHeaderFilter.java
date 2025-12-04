@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
+import java.util.List;
 import java.util.UUID;
 
 @Component
@@ -39,7 +40,17 @@ public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<J
             ServerHttpRequest request = exchange.getRequest();
 
             // 1. Authorization 헤더 확인
-            if (!request.getHeaders().containsKey(HttpHeaders.AUTHORIZATION)) {
+            List<String> authHeaders = request.getHeaders().get(HttpHeaders.AUTHORIZATION);
+            String path = request.getURI().getPath();
+            boolean isProtectedPath = path.startsWith("/my");
+
+            if (authHeaders == null || authHeaders.isEmpty() || authHeaders.get(0).isEmpty()) {
+                if (isProtectedPath) {
+                    log.warn("Unauthorized access to protected path {}, redirecting to login.", path);
+                    exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                    return exchange.getResponse().setComplete();
+                }
+
                 String guestId;
                 HttpCookie guestCookie = request.getCookies().getFirst("guest_id"); // 1) 기존 쿠키 확인
 
