@@ -16,9 +16,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.security.Key;
 import java.util.List;
-import java.util.UUID;
 
 @Component
 @Slf4j
@@ -59,23 +57,11 @@ public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<J
                     guestId = guestCookie.getValue();
                     log.info("GUEST request with existing ID: {}", guestId);
                 } else {
-                    // 1-2. 쿠키가 없으면 새로운 UUID 생성
-                    guestId = String.valueOf(SnowflakeIdGenerator.nextId());
-
-                    // 1-3. **응답에 Set-Cookie를 추가하여 클라이언트에게 전송**
-                    ResponseCookie cookie = ResponseCookie.from("guest_id", guestId)
-                            .maxAge(60 * 60 * 24 * 3) // 3일 유효기간
-                            .path("/")
-                            .httpOnly(true) // XSS 방지
-                            .secure(secure) // HTTPS일 경우 Secure 설정
-                            .sameSite("Lax") // CSRF 방지
-                            .build();
-
-                    exchange.getResponse().addCookie(cookie);
-                    log.info("New GUEST ID generated: {}", guestId);
+                    exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                    return exchange.getResponse().setComplete();
                 }
+
                 log.warn("Authorization header is missing");
-                // 필요하면 여기서 예외 던짐
                 ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
                         .header("X-Guest-Id", guestId) // 혹은 "anonymous" 또는 헤더 자체를 안 보낼 수도 있음
                         .header("X-Role", "GUEST")
@@ -92,7 +78,6 @@ public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<J
             String accessToken = authHeader.substring(7); // "Bearer " 제거
 
             try {
-                // 2. JWT 검증
                 SecretKey key = Keys.hmacShaKeyFor(SECRET_KEY.getBytes(StandardCharsets.UTF_8));
                 Claims claims = Jwts.parser()
                         .verifyWith(key)
@@ -100,16 +85,22 @@ public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<J
                         .parseClaimsJws(accessToken)
                         .getBody();
 
-                // 3. userId 추출
                 Long userId = claims.get("id", Long.class); // JWT payload에 userId가 있어야 함
                 String role = claims.get("role", String.class); // <-- 토큰에서 'role' 클레임 추출
                 log.debug("Extracted userId from JWT: {}", userId);
 
-                // 4. X-USER-ID 헤더로 추가
                 ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
                         .header("X-User-Id", userId.toString())
                         .header("X-Role", role)
                         .build();
+
+                ResponseCookie deleteCookie = ResponseCookie.from("guest_id", "")
+                        .maxAge(0)
+                        .path("/")
+                        .build();
+
+                exchange.getResponse().addCookie(deleteCookie);
+
 
                 return chain.filter(exchange.mutate().request(mutatedRequest).build());
             }  catch (io.jsonwebtoken.ExpiredJwtException e) {
