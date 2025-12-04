@@ -60,7 +60,7 @@ public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<J
                     log.info("GUEST request with existing ID: {}", guestId);
                 } else {
                     // 1-2. 쿠키가 없으면 새로운 UUID 생성
-                    guestId = UUID.randomUUID().toString();
+                    guestId = String.valueOf(SnowflakeIdGenerator.nextId());
 
                     // 1-3. **응답에 Set-Cookie를 추가하여 클라이언트에게 전송**
                     ResponseCookie cookie = ResponseCookie.from("guest_id", guestId)
