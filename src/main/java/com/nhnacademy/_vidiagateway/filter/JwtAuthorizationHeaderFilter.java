@@ -42,6 +42,7 @@ public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<J
             String path = request.getURI().getPath();
             boolean isProtectedPath = path.startsWith("/my");
 
+
             if (authHeaders == null || authHeaders.isEmpty() || authHeaders.get(0).isEmpty()) {
                 if (isProtectedPath) {
                     log.warn("Unauthorized access to protected path {}, redirecting to login.", path);
@@ -49,14 +50,8 @@ public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<J
                     return exchange.getResponse().setComplete();
                 }
 
-                String guestId;
-                HttpCookie guestCookie = request.getCookies().getFirst("guest_id"); // 1) 기존 쿠키 확인
-
-                if (guestCookie != null) {
-                    // 1-1. 기존 쿠키가 있으면 그 값을 사용
-                    guestId = guestCookie.getValue();
-                    log.info("GUEST request with existing ID: {}", guestId);
-                } else {
+                String guestId = exchange.getRequest().getHeaders().getFirst("X-Guest-Id");
+                if (guestId == null) {
                     exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
                     return exchange.getResponse().setComplete();
                 }
