@@ -89,14 +89,6 @@ public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<J
                         .header("X-Role", role)
                         .build();
 
-                ResponseCookie deleteCookie = ResponseCookie.from("guest_id", "")
-                        .maxAge(0)
-                        .path("/")
-                        .build();
-
-                exchange.getResponse().addCookie(deleteCookie);
-
-
                 return chain.filter(exchange.mutate().request(mutatedRequest).build());
             }  catch (io.jsonwebtoken.ExpiredJwtException e) {
                 log.warn("JWT expired: {}", e.getMessage());

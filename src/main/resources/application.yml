@@ -46,12 +46,22 @@ spring:
                 - StripPrefix=3
                 - name: JwtAuthorizationHeaderFilter
 
+
+            - id: front-auth-logout
+              uri: lb://4vidia-auth
+              predicates:
+                - Path=/api/v1/auth/auth/logout
+              filters:
+                - name: JwtAuthorizationHeaderFilter
+                - StripPrefix=3
+
             - id: 4vidia-auth
               uri: lb://4vidia-auth
               predicates:
                 - Path=/api/v1/auth/**
               filters:
                 - StripPrefix=3
+
 
 server:
   port: 8080
