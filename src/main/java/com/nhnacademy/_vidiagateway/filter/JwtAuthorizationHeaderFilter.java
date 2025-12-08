@@ -63,12 +63,14 @@ public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<J
                         .build();
                 return chain.filter(exchange.mutate().request(mutatedRequest).build());
             }
+            log.info("1");
 
             String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
                 log.warn("Invalid Authorization header");
                 return chain.filter(exchange);
             }
+            log.info("2");
 
             String accessToken = authHeader.substring(7); // "Bearer " 제거
 
@@ -81,8 +83,17 @@ public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<J
                         .getBody();
 
                 Long userId = claims.get("id", Long.class); // JWT payload에 userId가 있어야 함
-                String role = claims.get("role", String.class); // <-- 토큰에서 'role' 클레임 추출
-                log.debug("Extracted userId from JWT: {}", userId);
+                String role = claims.get("roles", String.class); // <-- 토큰에서 'role' 클레임 추출
+                log.info("Extracted userId from JWT: {}{}", userId, role);
+                log.debug("Extracted userId from JWT: {}{}", userId, role);
+
+                if (path.startsWith("/admin")) {
+                    if (!"ADMIN".equals(role)) {
+                        log.warn("Forbidden: user {} tried to access admin path {}", userId, path);
+                        exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+                        return exchange.getResponse().setComplete();
+                    }
+                }
 
                 ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
                         .header("X-User-Id", userId.toString())
