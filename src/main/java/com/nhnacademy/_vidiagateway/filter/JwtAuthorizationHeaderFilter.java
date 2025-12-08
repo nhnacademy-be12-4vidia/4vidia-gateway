@@ -59,7 +59,6 @@ public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<J
                 log.warn("Authorization header is missing");
                 ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
                         .header("X-Guest-Id", guestId) // 혹은 "anonymous" 또는 헤더 자체를 안 보낼 수도 있음
-                        .header("X-Role", "GUEST")
                         .build();
                 return chain.filter(exchange.mutate().request(mutatedRequest).build());
             }
@@ -97,7 +96,7 @@ public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<J
 
                 ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
                         .header("X-User-Id", userId.toString())
-                        .header("X-Role", role)
+                        .header("X-User-Role", role)
                         .build();
 
                 return chain.filter(exchange.mutate().request(mutatedRequest).build());
