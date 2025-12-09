@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.util.Date;
 import java.util.List;
 
 @Component
@@ -80,6 +81,21 @@ public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<J
                         .build()
                         .parseClaimsJws(accessToken)
                         .getBody();
+                Date expiration = claims.getExpiration();
+
+// 현재 시간
+                Date now = new Date();
+
+// 로그 출력
+                log.info("JWT 만료시간(exp): {}", expiration);
+                log.info("현재 서버시간: {}", now);
+
+// 만료 여부 직접 확인도 가능
+                if (expiration != null && expiration.before(now)) {
+                    log.warn("Token is expired by exp claim");
+                    exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                    return exchange.getResponse().setComplete();
+                }
 
                 Long userId = claims.get("id", Long.class); // JWT payload에 userId가 있어야 함
                 String role = claims.get("roles", String.class); // <-- 토큰에서 'role' 클레임 추출
