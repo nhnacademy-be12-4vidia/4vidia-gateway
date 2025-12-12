@@ -30,14 +30,6 @@ spring:
                 - StripPrefix=3
                 - name: JwtAuthorizationHeaderFilter
 
-
-            - id: 4vidia-book-service-search
-              uri: lb://4vidia-bookstore-service
-              predicates:
-                - Path=/api/v1/book-service/books/search/**
-              filters:
-                - StripPrefix=3
-
             - id: 4vidia-book-service
               uri: lb://4vidia-bookstore-service
               predicates:
