@@ -77,7 +77,7 @@ eureka:
     fetch-registry: true
     register-with-eureka: true
     service-url:
-      defaultZone: http://${ADMIN_ID}:${ADMIN_PASSWORD}@4vidia-discovery:8080/eureka/
+      defaultZone: http://${ADMIN_ID}:${ADMIN_PASSWORD}@4vidia-discovery-1:8080/eureka/
 
 auth:
   cookie:
