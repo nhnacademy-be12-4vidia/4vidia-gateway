@@ -54,6 +54,10 @@ jobs:
             echo $GH_TOKEN | docker login ghcr.io -u baejongto --password-stdin
             cd ~
             
-            echo "Starting 4vidia-gateway-1"
+            echo "Deploy 4vidia-gateway-1"
             docker compose pull 4vidia-gateway-1
             docker compose up -d 4vidia-gateway-1
+            
+            echo "Deploy 4vidia-gateway-2"
+            docker compose pull 4vidia-gateway-2
+            docker compose up -d 4vidia-gateway-2
