@@ -51,6 +51,7 @@ public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<J
                     return exchange.getResponse().setComplete();
                 }
 
+
                 String guestId = exchange.getRequest().getHeaders().getFirst("X-Guest-Id");
                 if (guestId == null) {
                     exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);

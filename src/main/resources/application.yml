@@ -55,6 +55,12 @@ spring:
                 - name: JwtAuthorizationHeaderFilter
                 - StripPrefix=3
 
+            - id: 4vidia-auth-payco
+              uri: lb://4vidia-auth
+              predicates:
+                - Path=/login/oauth2/code/payco
+
+
             - id: 4vidia-auth
               uri: lb://4vidia-auth
               predicates:
