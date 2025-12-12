@@ -38,10 +38,12 @@ public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<J
         return (exchange, chain) -> {
             ServerHttpRequest request = exchange.getRequest();
 
+
             // 1. Authorization 헤더 확인
             List<String> authHeaders = request.getHeaders().get(HttpHeaders.AUTHORIZATION);
             String path = request.getURI().getPath();
-            boolean isProtectedPath = path.startsWith("/hihi");
+
+            boolean isProtectedPath = path.startsWith("/users");
 
 
             if (authHeaders == null || authHeaders.isEmpty() || authHeaders.get(0).isEmpty()) {
