@@ -67,14 +67,12 @@ public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<J
                         .build();
                 return chain.filter(exchange.mutate().request(mutatedRequest).build());
             }
-            log.info("1");
 
             String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
                 log.warn("Invalid Authorization header");
                 return chain.filter(exchange);
             }
-            log.info("2");
 
             String accessToken = authHeader.substring(7); // "Bearer " 제거
 

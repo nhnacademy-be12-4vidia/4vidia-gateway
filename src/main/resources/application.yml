@@ -9,7 +9,7 @@ spring:
             - id: 4vidia-coupon-service
               uri: lb://4vidia-coupon-service
               predicates:
-                - Path=/api/v1/coupon/**
+                - Path=/api/v1/coupon-service/**
               filters:
                 - StripPrefix=3
                 - name: JwtAuthorizationHeaderFilter
