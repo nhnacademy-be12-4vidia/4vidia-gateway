@@ -55,6 +55,14 @@ spring:
                 - name: JwtAuthorizationHeaderFilter
                 - StripPrefix=3
 
+            - id: 4vidia-auth-validate
+              uri: lb://4vidia-auth
+              predicates:
+                - Path=/api/v1/auth/validate
+              filters:
+                - StripPrefix=3
+
+
             - id: 4vidia-auth-payco
               uri: lb://4vidia-auth
               predicates:
