@@ -16,6 +16,8 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
+import java.util.UUID;
+
 @Component
 @Slf4j
 public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<JwtAuthorizationHeaderFilter.Config> {
@@ -37,12 +39,18 @@ public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<J
     public GatewayFilter apply(Config config) {
         return (exchange, chain) -> {
             ServerHttpRequest request = exchange.getRequest();
+            String path = request.getURI().getPath();
 
             MultiValueMap<String, HttpCookie> cookies = exchange.getRequest().getCookies();
             HttpCookie ses = cookies.getFirst("SES");
             HttpCookie aut = cookies.getFirst("AUT");
-            String path = request.getURI().getPath();
             boolean isProtectedPath = path.startsWith("/users");
+
+            String incomingTraceId = request.getHeaders().getFirst("X-Trace-Id");
+            String traceId =
+                    (incomingTraceId == null || incomingTraceId.isEmpty())
+                            ? UUID.randomUUID().toString()
+                            : incomingTraceId;
 
             if (isProtectedPath && (ses == null || aut == null)) {
                 log.warn("Protected path {} accessed without SES/AUT cookies", path);
@@ -52,25 +60,32 @@ public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<J
 
             String guestId = exchange.getRequest().getHeaders().getFirst("X-Guest-Id");
             if (guestId == null) {
+                log.warn("Missing X-Guest-Id header");
                 exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
                 return exchange.getResponse().setComplete();
             }
 
             if (ses != null && aut != null) {
                 return validateWithAuthServer(ses.getValue(), aut.getValue())
-                        .flatMap(userInfo -> forwardWithUserInfo(exchange, chain, request, userInfo, guestId))
-                        .onErrorResume(err -> {
-                            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                        .flatMap(userInfo -> forwardWithUserInfo(exchange, chain, request, userInfo, guestId, traceId))
+                        .onErrorResume(Exception.class, e -> {
+                            log.error("Gateway internal error", e);
+                            exchange.getResponse().setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR);
                             return exchange.getResponse().setComplete();
                         });
             }
 
             ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
                     .header("X-Guest-Id", guestId) // 혹은 "anonymous" 또는 헤더 자체를 안 보낼 수도 있음
+                    .header("X-Trace-Id", traceId)
                     .build();
             return chain.filter(exchange.mutate().request(mutatedRequest).build());
         };
     }
+
+    /*
+     * auth서버에서 토큰 검증하도록
+     */
     private Mono<UserInfoResponse> validateWithAuthServer(String ses, String aut) {
         log.debug("Calling auth validate API");
 
@@ -96,7 +111,8 @@ public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<J
             GatewayFilterChain chain,
             ServerHttpRequest request,
             UserInfoResponse userInfo,
-            String guestId
+            String guestId,
+            String traceId
     ) {
         log.debug("Forwarding request with user info");
 
@@ -104,6 +120,7 @@ public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<J
                 .header("X-User-Id", String.valueOf(userInfo.id()))
                 .header("X-User-Role", userInfo.roles())
                 .header("X-Guest-Id", guestId)
+                .header("X-Trace-Id", traceId)
                 .build();
 
         return chain.filter(exchange.mutate().request(mutatedRequest).build());
