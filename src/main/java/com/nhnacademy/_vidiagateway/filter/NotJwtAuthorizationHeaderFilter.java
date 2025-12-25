@@ -48,7 +48,16 @@ public class NotJwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactor
                     .header("X-Trace-Id", traceId)
                     .build();
 
-            return chain.filter(exchange.mutate().request(mutatedRequest).build());
-        };
+            //reactor는 내부에서 찍어야해
+            return Mono.deferContextual(ctx -> {
+                        log.info("NotJwt filter pass path={}", path);
+                        return chain.filter(
+                                exchange.mutate()
+                                        .request(mutatedRequest)
+                                        .build()
+                        );
+                    })
+                    // 여기서 Context 주입***
+                    .contextWrite(context -> context.put("traceId", traceId));        };
     }
 }
