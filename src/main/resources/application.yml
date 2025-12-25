@@ -17,6 +17,14 @@ spring:
             - id: 4vidia-user-service
               uri: lb://4vidia-bookstore-service
               predicates:
+                - Path=/api/v1/user-service/auth/emails/exists
+              filters:
+                - StripPrefix=3
+                - name: NotJwtAuthorizationHeaderFilter
+
+            - id: 4vidia-user-service
+              uri: lb://4vidia-bookstore-service
+              predicates:
                 - Path=/api/v1/user-service/**
               filters:
                 - StripPrefix=3
@@ -52,22 +60,8 @@ spring:
               predicates:
                 - Path=/api/v1/auth/auth/logout
               filters:
+                - StripPrefix=3
                 - name: JwtAuthorizationHeaderFilter
-                - StripPrefix=3
-
-            - id: 4vidia-auth-validate
-              uri: lb://4vidia-auth
-              predicates:
-                - Path=/api/v1/auth/validate
-              filters:
-                - StripPrefix=3
-
-
-            - id: 4vidia-auth-payco
-              uri: lb://4vidia-auth
-              predicates:
-                - Path=/login/oauth2/code/**
-
 
             - id: 4vidia-auth
               uri: lb://4vidia-auth
@@ -75,7 +69,7 @@ spring:
                 - Path=/api/v1/auth/**
               filters:
                 - StripPrefix=3
-
+                - name: NotJwtAuthorizationHeaderFilter
 
 server:
   port: 8080

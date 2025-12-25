@@ -1,6 +1,6 @@
 package com.nhnacademy._vidiagateway.filter;
 
-import com.nhnacademy._vidiagateway.dto.UserInfoResponse;
+import com.nhnacademy._vidiagateway.dto.UserGatewayResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
@@ -8,7 +8,6 @@ import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.http.HttpCookie;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseCookie;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.util.MultiValueMap;
@@ -40,45 +39,79 @@ public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<J
         return (exchange, chain) -> {
             ServerHttpRequest request = exchange.getRequest();
             String path = request.getURI().getPath();
+            log.info(path);
 
-            MultiValueMap<String, HttpCookie> cookies = exchange.getRequest().getCookies();
+            MultiValueMap<String, HttpCookie> cookies = request.getCookies();
             HttpCookie ses = cookies.getFirst("SES");
             HttpCookie aut = cookies.getFirst("AUT");
+
             boolean isProtectedPath = path.startsWith("/users");
 
-            String incomingTraceId = request.getHeaders().getFirst("X-Trace-Id");
-            String traceId =
-                    (incomingTraceId == null || incomingTraceId.isEmpty())
-                            ? UUID.randomUUID().toString()
-                            : incomingTraceId;
-
-            if (isProtectedPath && (ses == null || aut == null)) {
-                log.warn("Protected path {} accessed without SES/AUT cookies", path);
-                exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-                return exchange.getResponse().setComplete();
-            }
-
-            String guestId = exchange.getRequest().getHeaders().getFirst("X-Guest-Id");
+            String guestId = request.getHeaders().getFirst("X-Guest-Id");
             if (guestId == null) {
-                log.warn("Missing X-Guest-Id header");
                 exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
                 return exchange.getResponse().setComplete();
             }
 
+            String incomingTraceId = request.getHeaders().getFirst("X-Trace-Id");
+            String traceId = (incomingTraceId == null || incomingTraceId.isEmpty()) ? UUID.randomUUID().toString() : incomingTraceId;
+
+            // 보호 API인데 로그인 안됨
+            if (isProtectedPath && (ses == null || aut == null)) {
+                exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                return exchange.getResponse().setComplete();
+            }
+
+
+
+            // 로그인 상태
             if (ses != null && aut != null) {
                 return validateWithAuthServer(ses.getValue(), aut.getValue())
-                        .flatMap(userInfo -> forwardWithUserInfo(exchange, chain, request, userInfo, guestId, traceId))
-                        .onErrorResume(Exception.class, e -> {
-                            log.error("Gateway internal error", e);
-                            exchange.getResponse().setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR);
+                        .flatMap(userInfo -> {
+
+                            // 🚫 휴면 계정
+                            if ("DORMANT".equals(userInfo.status())) {
+                                log.info("휴먼유저");
+                                exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+                                exchange.getResponse().getHeaders()
+                                        .add("X-Error-Code", "DORMANT_USER");
+                                return exchange.getResponse().setComplete();
+                            }
+
+                            // ⚠️ 임시 계정 → 필수 정보 입력만 허용
+                            if ("TEMP".equals(userInfo.status())
+                                    && !(path.startsWith("/users/complete-profile")||path.startsWith("/users/name")||path.startsWith("/users/role")||path.startsWith("/auth/logout"))) {
+                                log.info("임시유저");
+                                exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+                                exchange.getResponse().getHeaders()
+                                        .add("X-Error-Code", "TEMP_USER");
+                                return exchange.getResponse().setComplete();
+                            }
+
+                            // ✅ 정상 사용자 → 헤더 주입
+                            ServerHttpRequest mutatedRequest = request.mutate()
+                                    .header("X-User-Id", String.valueOf(userInfo.id()))
+                                    .header("X-User-Role", userInfo.roles())
+                                    .header("X-Guest-Id", guestId)
+                                    .header("X-Trace-Id", traceId)
+                                    .build();
+
+                            return chain.filter(
+                                    exchange.mutate().request(mutatedRequest).build()
+                            );
+                        })
+                        .onErrorResume(e -> {
+                            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
                             return exchange.getResponse().setComplete();
                         });
             }
 
-            ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
-                    .header("X-Guest-Id", guestId) // 혹은 "anonymous" 또는 헤더 자체를 안 보낼 수도 있음
+            // 비로그인 + 비보호 API
+            ServerHttpRequest mutatedRequest = request.mutate()
+                    .header("X-Guest-Id", guestId)
                     .header("X-Trace-Id", traceId)
                     .build();
+
             return chain.filter(exchange.mutate().request(mutatedRequest).build());
         };
     }
@@ -86,46 +119,23 @@ public class JwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactory<J
     /*
      * auth서버에서 토큰 검증하도록
      */
-    private Mono<UserInfoResponse> validateWithAuthServer(String ses, String aut) {
-        log.debug("Calling auth validate API");
-
+    private Mono<UserGatewayResponse> validateWithAuthServer(String ses, String aut) {
         return webClient.post()
-                .uri("lb://4vidia-auth/validate") // ⭐ 핵심
+                .uri("lb://4vidia-auth/validate")
                 .cookie("SES", ses)
                 .cookie("AUT", aut)
-                .retrieve()
-                .onStatus(
-                        status -> status == HttpStatus.UNAUTHORIZED,
-                        response -> {
-                            log.warn("Auth server returned 401");
-                            return Mono.error(new RuntimeException("Unauthorized"));
-                        }
-                )
-                .bodyToMono(UserInfoResponse.class)
-                .doOnNext(user -> log.debug("Auth validated user: {}", user))
-                .doOnError(err -> log.error("Auth validation error", err));
+                .exchangeToMono(response -> {
+                    if (response.statusCode().is2xxSuccessful()) {
+                        return response.bodyToMono(UserGatewayResponse.class);
+                    }
+
+                    if (response.statusCode() == HttpStatus.UNAUTHORIZED) {
+                        return Mono.empty(); // 🔥 예외 아님
+                    }
+
+                    return Mono.error(new IllegalStateException(
+                            "Unexpected auth response: " + response.statusCode()));
+                });
     }
-
-    private Mono<Void> forwardWithUserInfo(
-            ServerWebExchange exchange,
-            GatewayFilterChain chain,
-            ServerHttpRequest request,
-            UserInfoResponse userInfo,
-            String guestId,
-            String traceId
-    ) {
-        log.debug("Forwarding request with user info");
-
-        ServerHttpRequest mutatedRequest = request.mutate()
-                .header("X-User-Id", String.valueOf(userInfo.id()))
-                .header("X-User-Role", userInfo.roles())
-                .header("X-Guest-Id", guestId)
-                .header("X-Trace-Id", traceId)
-                .build();
-
-        return chain.filter(exchange.mutate().request(mutatedRequest).build());
-    }
-
-
 }
 
