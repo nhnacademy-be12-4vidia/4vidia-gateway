@@ -5,7 +5,7 @@
     <conversionRule conversionWord="wEx" converterClass="org.springframework.boot.logging.logback.ExtendedWhitespaceThrowableProxyConverter" />
 
     <property name="LOG_PATH" value="./logs" />
-    <property name="LOG_FILE_NAME" value="front" />
+    <property name="LOG_FILE_NAME" value="gateway" />
 
     <property name="CONSOLE_LOG_PATTERN"
               value="%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){green} %clr([%thread]){blue} %clr(%-5level) %clr([%X{traceId:-NoID}]){magenta} %clr(%logger{36}){cyan} - %msg%n"/>
