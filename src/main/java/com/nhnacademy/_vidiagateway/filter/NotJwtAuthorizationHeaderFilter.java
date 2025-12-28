@@ -35,12 +35,6 @@ public class NotJwtAuthorizationHeaderFilter extends AbstractGatewayFilterFactor
             String path = request.getURI().getPath();
             log.info(path);
 
-            MultiValueMap<String, HttpCookie> cookies = request.getCookies();
-            HttpCookie ses = cookies.getFirst("SES");
-            HttpCookie aut = cookies.getFirst("AUT");
-
-            boolean isProtectedPath = path.startsWith("/users");
-
             String incomingTraceId = request.getHeaders().getFirst("X-Trace-Id");
             String traceId = (incomingTraceId == null || incomingTraceId.isEmpty()) ? UUID.randomUUID().toString() : incomingTraceId;
 

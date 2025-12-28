@@ -40,6 +40,7 @@ public class JwtAuthorizationHeaderFilter
             ServerHttpRequest request = exchange.getRequest();
             String path = request.getURI().getPath();
             // 여기에 path로그 찍으면 안돼지
+            log.info("{}",path);
             MultiValueMap<String, HttpCookie> cookies = request.getCookies();
             HttpCookie ses = cookies.getFirst("SES");
             HttpCookie aut = cookies.getFirst("AUT");
@@ -70,6 +71,7 @@ public class JwtAuthorizationHeaderFilter
                 return validateWithAuthServer(ses.getValue(), aut.getValue(), traceId)
                         .flatMap(userInfo ->
                                 Mono.deferContextual(ctx -> {
+                                    log.info("{},{},{}", userInfo.id(), userInfo.getRoles(), userInfo.getStatus());
 
                                     log.info("JWT validated path={}, userId={}", path, userInfo.id());
 
@@ -134,7 +136,7 @@ public class JwtAuthorizationHeaderFilter
 
     private Mono<UserGatewayResponse> validateWithAuthServer(String ses, String aut, String traceId) {
         return webClient.post()
-                .uri("lb://4vidia-auth/validate")
+                .uri("lb://4vidia-auth/internal/validate")
                 .cookie("SES", ses)
                 .cookie("AUT", aut)
                 .header("X-Trace-Id", traceId)
@@ -143,7 +145,7 @@ public class JwtAuthorizationHeaderFilter
                         return response.bodyToMono(UserGatewayResponse.class);
                     }
                     if (response.statusCode() == HttpStatus.UNAUTHORIZED) {
-                        return Mono.empty();
+                        return Mono.error(new IllegalStateException("UNAUTHORIZED"));
                     }
                     return Mono.error(new IllegalStateException(
                             "Unexpected auth response: " + response.statusCode()));
