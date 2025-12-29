@@ -75,12 +75,17 @@ server:
   port: 8080
 
 eureka:
+  instance:
+    # (선택) 게이트웨이 자신도 10초마다 생존 신고
+    lease-renewal-interval-in-seconds: 10
   client:
+    # ★ 필수: 5초마다 유레카 서버 명단을 새로고침 (기본 30초 -> 5초)
+    registry-fetch-interval-seconds: 5
+
     fetch-registry: true
     register-with-eureka: true
     service-url:
       defaultZone: http://${ADMIN_ID}:${ADMIN_PASSWORD}@4vidia-discovery-1:8080/eureka/
-
 auth:
   cookie:
     secure: true
