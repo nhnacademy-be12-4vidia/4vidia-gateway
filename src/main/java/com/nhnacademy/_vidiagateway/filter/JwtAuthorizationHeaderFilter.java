@@ -92,6 +92,15 @@ public class JwtAuthorizationHeaderFilter
 
                                     log.info("JWT validated path={}, userId={}", path, userInfo.id());
 
+                                    if ("DELETED".equals(userInfo.status())) {
+                                        log.info("DELETED user");
+                                        return writeFailResponse(
+                                                exchange,
+                                                HttpStatus.FORBIDDEN,
+                                                "탈퇴 계정입니다",
+                                                "DELETED_USER"
+                                        );
+                                    }
                                     // 🚫 휴면 계정
                                     if ("DORMANT".equals(userInfo.status())&&!(path.startsWith("/auth/dormant/send-code")|| path.startsWith("/auth/dormant/verify")||path.startsWith("/users/name")|| path.startsWith("/users/role")|| path.startsWith("/auth/logout"))) {
                                         log.info("Dormant user");
