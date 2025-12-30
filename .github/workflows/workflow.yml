@@ -66,7 +66,6 @@ jobs:
             sleep 40
             echo "Starting 4vidia-gateway-1 (GREEN)..."
             docker compose up -d 4vidia-gateway-1
-            sleep 30
 
             echo "Waiting for 4vidia-gateway-1 health check..."
             HEALTH_CHECK_COUNT=0
@@ -94,7 +93,6 @@ jobs:
 
             echo "Starting 4vidia-gateway-2 (BLUE)..."
             docker compose up -d 4vidia-gateway-2
-            sleep 30
 
             echo "Waiting for 4vidia-gateway-2 health check..."
             HEALTH_CHECK_COUNT=0
