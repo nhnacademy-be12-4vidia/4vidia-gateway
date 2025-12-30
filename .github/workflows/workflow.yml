@@ -83,6 +83,7 @@ jobs:
               echo "GREEN container failed. Aborting deployment."
               exit 1
             fi
+            curl -X PUT "http://${ADMIN_ID}:${ADMIN_PASSWORD}@localhost:10465/eureka/v2/apps/4VIDIA-GATEWAY/4vidia-gateway-1/status?value=UP"
 
             echo "Setting 4vidia-gateway-2 DOWN in Eureka..."
             curl -X PUT \
