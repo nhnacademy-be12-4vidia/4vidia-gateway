@@ -92,7 +92,7 @@ jobs:
 
             echo "Stopping 4vidia-gateway-2 (BLUE)..."
             docker compose stop 4vidia-gateway-2
-            sleep 10
+            sleep 30
 
             echo "Starting 4vidia-gateway-2 (BLUE)..."
             docker compose up -d 4vidia-gateway-2
