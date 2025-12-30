@@ -83,6 +83,7 @@ jobs:
               exit 1
             fi
 
+            sleep 30
             
             echo "Setting 4vidia-gateway-1 UP in Eureka..."
             curl -X PUT "http://${ADMIN_ID}:${ADMIN_PASSWORD}@localhost:10465/eureka/v2/apps/4VIDIA-GATEWAY/4vidia-gateway-1/status?value=UP"
@@ -115,6 +116,9 @@ jobs:
               echo "BLUE container failed. Aborting deployment."
               exit 1
             fi
+            
+            sleep 30
+
 
             echo "Setting 4vidia-gateway-2 UP in Eureka..."
             curl -X PUT "http://${ADMIN_ID}:${ADMIN_PASSWORD}@localhost:10465/eureka/v2/apps/4VIDIA-GATEWAY/4vidia-gateway-2/status?value=UP"
