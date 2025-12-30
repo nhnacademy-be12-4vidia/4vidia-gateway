@@ -75,10 +75,6 @@ server:
   port: 8080
 
 eureka:
-  instance:
-    initial-status: STARTING      # 초기 상태 STARTING
-    lease-renewal-interval-in-seconds: 10
-    lease-expiration-duration-in-seconds: 30
   client:
     # ★ 필수: 5초마다 유레카 서버 명단을 새로고침 (기본 30초 -> 5초)
     registry-fetch-interval-seconds: 5
