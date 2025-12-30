@@ -63,7 +63,7 @@ jobs:
             curl -X PUT \
               "http://${ADMIN_ID}:${ADMIN_PASSWORD}@localhost:10465/eureka/v2/apps/4VIDIA-GATEWAY/4vidia-gateway-1/status?value=OUT_OF_SERVICE" || true
 
-            sleep 40
+            sleep 30
             echo "Starting 4vidia-gateway-1 (GREEN)..."
             docker compose up -d 4vidia-gateway-1
 
@@ -71,7 +71,7 @@ jobs:
             HEALTH_CHECK_COUNT=0
             while [ $HEALTH_CHECK_COUNT -lt 12 ]; do
               if curl -s http://localhost:10463/actuator/health | grep -q '"status":"UP"'; then
-                echo "4vidia-gateway-1 (GREEN) is UP."
+                echo "4vidia-gateway-1 (GREEN) is Actuator UP."
                 break
               fi
               echo "Health check attempt $((HEALTH_CHECK_COUNT+1)) failed. Retrying in 10s..."
@@ -87,6 +87,8 @@ jobs:
             echo "Setting 4vidia-gateway-1 UP in Eureka..."
             curl -X PUT "http://${ADMIN_ID}:${ADMIN_PASSWORD}@localhost:10465/eureka/v2/apps/4VIDIA-GATEWAY/4vidia-gateway-1/status?value=UP"
 
+            sleep 10
+            
             echo "Setting 4vidia-gateway-2 DOWN in Eureka..."
             curl -X PUT \
               "http://${ADMIN_ID}:${ADMIN_PASSWORD}@localhost:10465/eureka/v2/apps/4VIDIA-GATEWAY/4vidia-gateway-2/status?value=OUT_OF_SERVICE" || true
@@ -114,7 +116,7 @@ jobs:
               exit 1
             fi
 
-            echo "Setting 4vidia-gateway-1 UP in Eureka..."
+            echo "Setting 4vidia-gateway-2 UP in Eureka..."
             curl -X PUT "http://${ADMIN_ID}:${ADMIN_PASSWORD}@localhost:10465/eureka/v2/apps/4VIDIA-GATEWAY/4vidia-gateway-2/status?value=UP"
 
             echo "Cleaning up unused Docker images..."
