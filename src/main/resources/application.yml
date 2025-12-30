@@ -80,7 +80,7 @@ eureka:
     registry-fetch-interval-seconds: 5
 
     fetch-registry: true
-    register-with-eureka: false
+    register-with-eureka: true
     service-url:
       defaultZone: http://${ADMIN_ID}:${ADMIN_PASSWORD}@4vidia-discovery-1:8080/eureka/
 auth:
