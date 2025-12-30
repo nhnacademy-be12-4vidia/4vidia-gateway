@@ -51,13 +51,67 @@ jobs:
           envs: GH_TOKEN,GH_OWNER,SSH_PRIVATE_KEY,ADMIN_ID,ADMIN_PASSWORD
           script_stop: true
           script: |
+            set -e
             echo $GH_TOKEN | docker login ghcr.io -u baejongto --password-stdin
             cd ~
-            
-            echo "Deploy 4vidia-gateway-1"
-            docker compose pull 4vidia-gateway-1
+
+            # --- GREEN 배포 (gateway-1) ---
+            echo "Pulling latest image for 4vidia-gateway-1..."
+            docker compose pull 4vidia-gateway-1 4vidia-gateway-2
+
+            echo "Setting 4vidia-gateway-1 DOWN in Eureka..."
+            curl -X PUT \
+              "http://${ADMIN_ID}:${ADMIN_PASSWORD}@localhost:10465/eureka/v2/apps/4VIDIA-GATEWAY/4vidia-gateway-1/status?value=OUT_OF_SERVICE" || true
+
+            echo "Starting 4vidia-gateway-1 (GREEN)..."
             docker compose up -d 4vidia-gateway-1
-            
-            echo "Deploy 4vidia-gateway-2"
-            docker compose pull 4vidia-gateway-2
+            sleep 30
+
+            echo "Waiting for 4vidia-gateway-1 health check..."
+            HEALTH_CHECK_COUNT=0
+            while [ $HEALTH_CHECK_COUNT -lt 12 ]; do
+              if curl -s http://localhost:10463/actuator/health | grep -q '"status":"UP"'; then
+                echo "4vidia-gateway-1 (GREEN) is UP."
+                break
+              fi
+              echo "Health check attempt $((HEALTH_CHECK_COUNT+1)) failed. Retrying in 10s..."
+              sleep 10
+              HEALTH_CHECK_COUNT=$((HEALTH_CHECK_COUNT+1))
+            done
+            if [ $HEALTH_CHECK_COUNT -eq 12 ]; then
+              echo "GREEN container failed. Aborting deployment."
+              exit 1
+            fi
+
+            echo "Setting 4vidia-gateway-2 DOWN in Eureka..."
+            curl -X PUT \
+              "http://${ADMIN_ID}:${ADMIN_PASSWORD}@localhost:10465/eureka/v2/apps/4VIDIA-GATEWAY/4vidia-gateway-2/status?value=OUT_OF_SERVICE" || true
+
+            echo "Stopping 4vidia-gateway-2 (BLUE)..."
+            docker compose stop 4vidia-gateway-2
+            sleep 10
+
+            echo "Starting 4vidia-gateway-2 (BLUE)..."
             docker compose up -d 4vidia-gateway-2
+            sleep 30
+
+            echo "Waiting for 4vidia-gateway-2 health check..."
+            HEALTH_CHECK_COUNT=0
+            while [ $HEALTH_CHECK_COUNT -lt 12 ]; do
+              if curl -s http://localhost:10464/actuator/health | grep -q '"status":"UP"'; then
+                echo "4vidia-gateway-2 (BLUE) is UP."
+                break
+              fi
+              echo "Health check attempt $((HEALTH_CHECK_COUNT+1)) failed. Retrying in 10s..."
+              sleep 10
+              HEALTH_CHECK_COUNT=$((HEALTH_CHECK_COUNT+1))
+            done
+            if [ $HEALTH_CHECK_COUNT -eq 12 ]; then
+              echo "BLUE container failed. Aborting deployment."
+              exit 1
+            fi
+
+            echo "Cleaning up unused Docker images..."
+            docker image prune -f
+
+            echo "🚀 Gateway deployment completed successfully!"
