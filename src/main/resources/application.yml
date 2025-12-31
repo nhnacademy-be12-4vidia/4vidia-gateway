@@ -76,18 +76,17 @@ server:
 
 eureka:
   instance:
-    initial-status: STARTING      # 초기 상태 STARTING
-    prefer-ip-address: true       # IP 주소 기준 등록
+#    initial-status: STARTING      # 초기 상태 STARTING
+#    prefer-ip-address: true       # IP 주소 기준 등록
     lease-renewal-interval-in-seconds: 10
     lease-expiration-duration-in-seconds: 30
   client:
     # ★ 필수: 5초마다 유레카 서버 명단을 새로고침 (기본 30초 -> 5초)
     registry-fetch-interval-seconds: 5
-
     fetch-registry: true
     register-with-eureka: true
     service-url:
-      defaultZone: http://${ADMIN_ID}:${ADMIN_PASSWORD}@4vidia-discovery-1:8080/eureka/
+      defaultZone: http://${ADMIN_ID}:${ADMIN_PASSWORD}@4vidia-discovery-1:8080/eureka/, http://${ADMIN_ID}:${ADMIN_PASSWORD}@4vidia-discovery-2:8080/eureka/
 auth:
   cookie:
     secure: true
