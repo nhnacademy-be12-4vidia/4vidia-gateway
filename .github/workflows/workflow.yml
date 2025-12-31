@@ -62,7 +62,7 @@ jobs:
             echo "Setting 4vidia-gateway-1 DOWN in Eureka..."
             curl -X PUT \
               "http://${ADMIN_ID}:${ADMIN_PASSWORD}@localhost:10465/eureka/v2/apps/4VIDIA-GATEWAY/4vidia-gateway-1/status?value=OUT_OF_SERVICE" || true
-            sleep 30
+            sleep 40
             
             echo "Starting 4vidia-gateway-1 (GREEN)..."
             docker compose up -d 4vidia-gateway-1
@@ -87,11 +87,12 @@ jobs:
             echo "Setting 4vidia-gateway-2 DOWN in Eureka..."
             curl -X PUT \
               "http://${ADMIN_ID}:${ADMIN_PASSWORD}@localhost:10465/eureka/v2/apps/4VIDIA-GATEWAY/4vidia-gateway-2/status?value=OUT_OF_SERVICE" || true
-            sleep 30
+            sleep 40
 
             echo "Starting 4vidia-gateway-2 (BLUE)..."
             docker compose up -d 4vidia-gateway-2
-
+            
+            sleep 20
             echo "Waiting for 4vidia-gateway-2 health check..."
             HEALTH_CHECK_COUNT=0
             while [ $HEALTH_CHECK_COUNT -lt 12 ]; do
