@@ -52,7 +52,9 @@ public class JwtAuthorizationHeaderFilter
             HttpCookie ses = cookies.getFirst("SES");
             HttpCookie aut = cookies.getFirst("AUT");
 
-            boolean isProtectedPath = path.startsWith("/users");
+            boolean isProtectedPath =
+                    path.startsWith("/users") || path.startsWith("/admin");
+
 
             // ===== traceId 결정 =====
             String incomingTraceId = request.getHeaders().getFirst("X-Trace-Id");
