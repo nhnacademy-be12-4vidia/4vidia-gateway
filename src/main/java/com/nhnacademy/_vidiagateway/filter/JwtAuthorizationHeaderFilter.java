@@ -121,6 +121,17 @@ public class JwtAuthorizationHeaderFilter
                                         );
                                     }
 
+                                    if (path.startsWith("/admin") && !userInfo.getRoles().equals("ADMIN")) {
+                                        log.warn("Forbidden admin access: userId={}, roles={}",
+                                                userInfo.id(), userInfo.getRoles());
+
+                                        return writeFailResponse(
+                                                exchange,
+                                                HttpStatus.FORBIDDEN,
+                                                "관리자 권한이 필요합니다",
+                                                "ADMIN_ONLY"
+                                        );
+                                    }
 
                                     // ✅ 정상 사용자
                                     ServerHttpRequest mutatedRequest = request.mutate()
